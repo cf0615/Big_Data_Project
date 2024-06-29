@@ -1,11 +1,84 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
+import pandas as pd
+import folium
+from streamlit_folium import folium_static
+import json
+
+#load datasets
+cases_malaysia = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/cases_malaysia_preprocessed.csv')
+case_state = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/caseState_preprocessed.csv')
+
+# Add tooltip data to the DataFrame
+case_state['tooltip'] = case_state.apply(lambda row: f"{row['state']}: {row['cases_new']} cases", axis=1)
 
 def covidCase():
     st.subheader("Covid-19 Cases in Malaysia")
+    
+    #sidebar option
+    selected_state = st.sidebar.selectbox('Select State', ['All'])
+    
+    if selected_state == 'All':
+        # Display overall Malaysia data
+        st.write("Overall Malaysia Data")
+        st.line_chart(cases_malaysia[['date', 'cases_new']].set_index('date'))
+        
+        # Display choropleth map
+        st.write("Covid-19 Cases by State")
+        
+        # Load GeoJSON data
+        geojson_path = 'C:/Users/junch/OneDrive/Documents/BigData/Project/Dashboard/malaysia.geojson'  # Path to the uploaded GeoJSON file
+        with open(geojson_path) as f:
+            geojson_data = json.load(f)
+        
+        # Create a folium map
+        m = folium.Map(location=[4.2105, 101.9758], zoom_start=6)
+        
+        # Create choropleth
+        choropleth = folium.Choropleth(
+            geo_data=geojson_data,
+            data=case_state,
+            columns=['state', 'cases_new'],
+            key_on='feature.properties.shapeName',  # Ensure this matches the GeoJSON property for state names
+            fill_color='YlOrRd',
+            fill_opacity=0.7,
+            line_opacity=0.2,
+            legend_name='Number of Cases'
+        ).add_to(m)
+        
+        # Add tooltip for cases
+        folium.GeoJson(
+            geojson_data,
+            style_function=lambda feature: {
+                'fillColor': 'transparent',
+                'color': 'transparent'
+            },
+            tooltip=folium.GeoJsonTooltip(
+                fields=['shapeName'],
+                aliases=['State: '],
+                localize=True,
+                sticky=False,
+                labels=True,
+                style="""
+                    background-color: #F0EFEF;
+                    border: 2px solid black;
+                    border-radius: 3px;
+                    box-shadow: 3px;
+                """
+            )
+        ).add_to(m)
+        
+        folium_static(m)
+    else:
+        # Display data for the selected state
+        st.write(f"Displaying Covid-19 cases for {selected_state}")
+        state_data = case_state[case_state['state'] == selected_state]
+        st.line_chart(state_data[['date', 'cases_new']].set_index('date'))
 
 def icu():
     st.subheader("ICU")
+    #sidebar option
+    selected_state = st.sidebar.selectbox('Select Year', ['All'])
     
 def death():
     st.subheader("Death")
@@ -21,8 +94,7 @@ def main():
     st.sidebar.markdown("---")
     #sidebar filter
     st.sidebar.header('Filter')
-    #sidebar option
-    selected_state = st.sidebar.selectbox('Select State', ['All'])
+    
     
     if (selected_page == "Covid Cases"):
         covidCase()
@@ -31,4 +103,5 @@ def main():
     else:
         death()
         
-main()
+if __name__ == "__main__":
+    main()
