@@ -9,6 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import roc_auc_score, precision_recall_fscore_support, roc_curve, auc, classification_report
 from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
 from xgboost import XGBClassifier
+import joblib
 
 # Load the dataset
 data = pd.read_csv('C:/Users/User/.spyder-py3/Kaggle_Sirio_preprocessed.csv')
@@ -41,21 +42,21 @@ X_train = scaler.fit_transform(np.nan_to_num(X_train))
 X_test = scaler.transform(np.nan_to_num(X_test))
 
 # Train a Random Forest Classifier
-model = RandomForestClassifier(n_jobs=-1, n_estimators=200, criterion='entropy', oob_score=True, random_state=42)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-acc = metrics.accuracy_score(y_test, y_pred)
+rf_model = RandomForestClassifier(n_jobs=-1, n_estimators=200, criterion='entropy', oob_score=True, random_state=42)
+rf_model.fit(X_train, y_train)
+y_pred_rf = rf_model.predict(X_test)
+acc_rf = metrics.accuracy_score(y_test, y_pred_rf)
 
-print('Random Forest accuracy:', acc)
+print('Random Forest accuracy:', acc_rf)
 
 # Use classification_report to get detailed metrics
-#print(classification_report(y_test, y_pred, zero_division=0))
+#print(classification_report(y_test, y_pred_rf, zero_division=0))
 
 fpr = dict()
 tpr = dict()
 roc_auc = dict()
 for i in range(len(np.unique(y_encoded))):
-    fpr[i], tpr[i], _ = roc_curve(y_test == i, y_pred == i)
+    fpr[i], tpr[i], _ = roc_curve(y_test == i, y_pred_rf == i)
     roc_auc[i] = auc(fpr[i], tpr[i])
 print('AUC:', roc_auc)
 
@@ -95,5 +96,6 @@ print("XGBoost's prediction accuracy is: %3.2f" % (acc_xgb))
 print("Time consumed for training: %4.3f seconds" % (xgb_train_time))
 print("Time consumed for prediction: %6.5f seconds" % (xgb_prediction_time))
 
-# Use classification_report to get detailed metrics
-#print(classification_report(y_test, preds, zero_division=0))
+# Save the final XGBoost model and scaler
+joblib.dump(xgb_best, 'C:/Users/User/.spyder-py3/xgb_icu_prediction.pkl')
+joblib.dump(scaler, 'C:/Users/User/.spyder-py3/scaler.pkl')
