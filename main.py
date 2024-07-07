@@ -6,11 +6,14 @@ from streamlit_folium import folium_static
 import json
 import joblib
 from sklearn.metrics import classification_report
+import altair as alt
 
 #load datasets
 cases_malaysia = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/Preprocessed/cases_malaysia_preprocessed.csv')
 case_state = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/Preprocessed/caseState_preprocessed.csv')
 mortality_data = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/Preprocessed/covidDataPreprocessed.csv')
+deaths_malaysia = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_malaysia.csv')
+deaths_state = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_state.csv')
 
 # Add tooltip data to the DataFrame
 case_state['tooltip'] = case_state.apply(lambda row: f"{row['state']}: {row['cases_new']} cases", axis=1)
@@ -69,7 +72,106 @@ def predict_mortality():
         #st.write(f"Prediction Probability: {prediction_proba[0] * 100:.2f}% chance of death")
 
 
+def mortality():
+    st.subheader("Mortality")
+    st.sidebar.header('Filters')
 
+    # Load the datasets
+    deaths_malaysia = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_malaysia.csv')
+    deaths_state = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_state.csv')
+
+    # Convert date columns to datetime
+    deaths_malaysia['date'] = pd.to_datetime(deaths_malaysia['date'])
+    deaths_state['date'] = pd.to_datetime(deaths_state['date'])
+
+    selected_state = st.sidebar.selectbox('Select State', ['All'] + sorted(deaths_state['state'].unique()))
+    selected_year = st.sidebar.selectbox('Select Year', ['All'] + sorted(deaths_malaysia['date'].dt.year.unique()))
+
+    if selected_state == 'All':
+        st.subheader("Overall Mortality in Malaysia")
+        if selected_year == 'All':
+            filtered_data = deaths_malaysia
+            filtered_state_data = deaths_state
+        else:
+            filtered_data = deaths_malaysia[deaths_malaysia['date'].dt.year == int(selected_year)]
+            filtered_state_data = deaths_state[deaths_state['date'].dt.year == int(selected_year)]
+        
+        # Group data by date and sum the total deaths
+        grouped_data = filtered_data.groupby('date', as_index=False).sum()
+
+        mortality_chart = alt.Chart(grouped_data).mark_line().encode(
+            x='date:T',
+            y='deaths_new:Q',
+            tooltip=['date:T', 'deaths_new:Q']
+        ).properties(
+            width=700,
+            height=400
+        )
+        st.altair_chart(mortality_chart)
+        
+        # Display deaths over time for all states
+        st.subheader('Deaths Over Time by State')
+        deaths_chart = alt.Chart(filtered_state_data).mark_line().encode(
+            x='date:T',
+            y='deaths_new:Q',
+            color='state:N',
+            tooltip=['date:T', 'state:N', 'deaths_new:Q']
+        ).properties(
+            width=700,
+            height=400
+        )
+        st.altair_chart(deaths_chart)
+
+    else:
+        # Display data for the selected state
+        st.subheader(f"Displaying Total Deaths for {selected_state}")
+        state_data = deaths_state[deaths_state['state'] == selected_state]
+
+        if selected_year != 'All':
+            state_data = state_data[state_data['date'].dt.year == int(selected_year)]
+
+        # New deaths in selected state
+        st.subheader(f"Deaths in {selected_state}")
+        state_chart = alt.Chart(state_data).mark_line().encode(
+            x='date:T',
+            y='deaths_new:Q',
+            tooltip=['date:T', 'deaths_new:Q']
+        ).properties(
+            width=700,
+            height=400
+        )
+        st.altair_chart(state_chart)
+
+        # Display deaths due to BID (Brought-in-Dead)
+        st.subheader(f"Deaths BID in {selected_state}")
+        state_bid_chart = alt.Chart(state_data).mark_line().encode(
+            x='date:T',
+            y='deaths_bid:Q',
+            tooltip=['date:T', 'deaths_bid:Q']
+        ).properties(
+            width=700,
+            height=400
+        )
+        st.altair_chart(state_bid_chart)
+
+        # Comparison of deaths_new and deaths_bid for selected state
+        st.subheader(f"Comparison of New Deaths and BID Deaths for {selected_state}")
+
+        comparison_chart = alt.Chart(state_data).transform_fold(
+            ['deaths_new', 'deaths_bid'],
+            as_=['Category', 'Value']
+        ).mark_line().encode(
+            x='date:T',
+            y='Value:Q',
+            color=alt.Color('Category:N', scale=alt.Scale(domain=['deaths_new', 'deaths_bid'], range=['blue', 'red']), legend=alt.Legend(title="Category")),
+            tooltip=['date:T', 'Category:N', 'Value:Q']
+        ).properties(
+            width=700,
+            height=400
+        ).interactive()
+        
+        st.altair_chart(comparison_chart)
+        
 def covidCase():
     st.subheader("Covid-19 Cases in Malaysia")
     
@@ -161,7 +263,7 @@ def main():
     #sidebar title
     st.sidebar.header('Pages')
     #sidebar option
-    selected_page = st.sidebar.selectbox('Select Page', ['Covid Cases', 'ICU', 'Deaths', 'Mortality Prediction'])
+    selected_page = st.sidebar.selectbox('Select Page', ['Covid Cases', 'ICU', 'Deaths', 'Mortality', 'Mortality Prediction'])
     #markdown
     st.sidebar.markdown("---")
     #sidebar filter
@@ -174,6 +276,8 @@ def main():
         icu()
     elif selected_page == "Deaths":
         death()
+    elif selected_page == "Mortality":
+        mortality()
     elif selected_page == "Mortality Prediction":
         predict_mortality()
         
