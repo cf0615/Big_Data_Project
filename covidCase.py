@@ -7,13 +7,24 @@ import folium
 from streamlit_folium import folium_static
 import altair as alt
 import matplotlib.pyplot as plt
+import mongodb_helper as mh
 
 @st.cache_data
 def load_data():
-    cases_malaysia = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/cases_malaysia_preprocessed.csv')
-    case_state = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/caseState_preprocessed.csv', parse_dates=['date'])
-    case_state['tooltip'] = case_state.apply(lambda row: f"{row['state']}: {row['cases_new']} cases", axis=1)
-    return cases_malaysia, case_state
+    cases_malaysia = mh.load_data_from_db('cases_malaysia', 'CovidData')
+    case_state = mh.load_data_from_db('cases_state', 'CovidData')
+    geojson_data = mh.load_data_from_db('malaysia_geojson', 'CovidData')
+    
+    if cases_malaysia is None:
+        st.error("Failed to load cases_malaysia data from MongoDB")
+    if case_state is None:
+        st.error("Failed to load case_state data from MongoDB")
+    if geojson_data is None:
+        st.error("Failed to load geojson data from MongoDB")
+    
+    return cases_malaysia, case_state, geojson_data
+    
+    return cases_malaysia, case_state, geojson_data
 
 def plot_overall_cases(cases_malaysia, selected_year):
     st.subheader("Overall Malaysia Data")
@@ -53,8 +64,8 @@ def plot_cases_by_state(case_state, selected_state, selected_year):
 def plot_case_trends(case_state):
     states = list(case_state.state.unique())
     
-    plt.rcParams["font.family"] = "monospace"
-    plt.rcParams.update({'font.size': 16})
+    plt.rcParams["font.family"] = "arial"
+    plt.rcParams.update({'font.size': 18})
     figure, axes = plt.subplots(4, 4, figsize=(30, 30), sharey=True)
     figure.set_size_inches([15, 15], forward=True)
     figure.suptitle('COVID-19 Case Trends')
@@ -79,16 +90,8 @@ def plot_case_trends(case_state):
     
     st.pyplot(figure)
 
-def display_choropleth(case_state, selected_year):
+def display_choropleth(case_state, selected_year, geojson_data):
     st.subheader("Covid-19 Cases by State")
-    
-    geojson_path = 'C:/Users/junch/OneDrive/Documents/BigData/Project/Dashboard/malaysia.geojson'  # Path to the GeoJSON file
-    try:
-        with open(geojson_path) as f:
-            geojson_data = json.load(f)
-    except Exception as e:
-        st.error(f"Error loading GeoJSON file: {e}")
-        return
 
     if selected_year == 'All':
         state_cases = case_state.groupby('state')['cases_new'].sum().reset_index()
@@ -139,16 +142,38 @@ def display_choropleth(case_state, selected_year):
         folium_static(m)
     except Exception as e:
         st.error(f"Error creating choropleth map: {e}")
+        
+def display_summary_statistics(case_state, selected_state, selected_year):
+    st.sidebar.subheader("Summary Statistics")
+    
+    # Filter by state if a specific state is selected
+    if selected_state != 'All':
+        case_state = case_state[case_state['state'] == selected_state]
+    
+    # Filter by year if a specific year is selected
+    if selected_year != 'All':
+        case_state = case_state[case_state['year'] == int(selected_year)]
+    
+    total_cases = case_state['cases_new'].sum()
+    total_recovered = case_state['cases_recovered'].sum()
+    # Get the latest active case count
+    latest_active = case_state.sort_values(by='date').iloc[-1]['cases_active'] if not case_state.empty else 0
+ 
+    st.sidebar.markdown(f"**Total New Cases:** {total_cases}")
+    st.sidebar.markdown(f"**Total Recovered:** {total_recovered}")
+    st.sidebar.markdown(f"**Latest Active Cases:** {latest_active}")
+
 
 def covid_case_page():
-    cases_malaysia, case_state = load_data()
+    cases_malaysia, case_state, geojson_data = load_data()
     st.sidebar.header('Filters')
     selected_state = st.sidebar.selectbox('Select State', ['All'] + sorted(case_state['state'].unique()))
     selected_year = st.sidebar.selectbox('Select Year', ['All'] + sorted(case_state['year'].unique()))
-
-    plot_overall_cases(cases_malaysia, selected_year)
+    display_summary_statistics(case_state, selected_state, selected_year)
+    
     if selected_state == 'All':
-        display_choropleth(case_state, selected_year)
+        plot_overall_cases(cases_malaysia, selected_year)
+        display_choropleth(case_state, selected_year, geojson_data)
         plot_case_trends(case_state)
     else:
         plot_cases_by_state(case_state, selected_state, selected_year)
