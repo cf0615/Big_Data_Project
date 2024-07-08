@@ -7,6 +7,7 @@ import json
 import joblib
 from sklearn.metrics import classification_report
 import altair as alt
+from deathPage import mortality, predict_mortality
 
 #load datasets
 cases_malaysia = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/Preprocessed/cases_malaysia_preprocessed.csv')
