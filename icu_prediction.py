@@ -10,17 +10,18 @@ from sklearn.metrics import roc_auc_score, precision_recall_fscore_support, roc_
 from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
 from xgboost import XGBClassifier
 import joblib
+import mongodb_helper as mh
 
 # Load the dataset
-data = pd.read_csv('C:/Users/User/.spyder-py3/Kaggle_Sirio_preprocessed.csv')
+data = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/Kaggle_Sirio_preprocessed_train.csv')
 
 # Check the shape and columns of the data
 print(data.shape)
 print(data.columns)
 
 # Define independent and dependent variables
-X = data[list(data.columns)[:-1]].values
-y = data[data.columns[-1]].values
+X = data.drop(columns=['ICU']).values
+y = data['ICU'].values
 
 # Check unique values in the target variable
 print("Unique values in the target variable:", np.unique(y))
@@ -97,5 +98,11 @@ print("Time consumed for training: %4.3f seconds" % (xgb_train_time))
 print("Time consumed for prediction: %6.5f seconds" % (xgb_prediction_time))
 
 # Save the final XGBoost model and scaler
-joblib.dump(xgb_best, 'C:/Users/User/.spyder-py3/xgb_icu_prediction.pkl')
-joblib.dump(scaler, 'C:/Users/User/.spyder-py3/scaler.pkl')
+joblib.dump(xgb_best, 'xgb_icu_prediction.pkl')
+joblib.dump(scaler, 'scaler.pkl')
+joblib.dump(data.drop(columns=['ICU']).columns, 'feature_columns.pkl')  # Save the feature columns
+
+mh.save_model_to_db(xgb_best, 'predict_icu_xgb', 'xgb_icu_prediction.pkl')
+mh.save_model_to_db(scaler, 'predict_icu_xgb', 'scaler.pkl')
+mh.save_model_to_db(data.drop(columns=['ICU']).columns, 'predict_icu_xgb', 'feature_columns.pkl')
+
