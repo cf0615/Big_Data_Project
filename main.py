@@ -1,15 +1,9 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 import streamlit as st
 from covidCase import covid_case_page
-#from icu import icuPage
+from icuPage import icuPage
 #from death import deathPage
 
-def icu():
-    st.subheader("ICU")
-    #sidebar option
-    #selected_state = st.sidebar.selectbox('Select Year', ['All'])
-    
 def death():
     st.subheader("Death")
 
@@ -22,13 +16,11 @@ def main():
     selected_page = st.sidebar.selectbox('Select Page', ['Covid Cases', 'ICU', 'Deaths'])
     #markdown
     st.sidebar.markdown("---")
-    #sidebar filter
-    st.sidebar.header('Filter')  
     
     if (selected_page == "Covid Cases"):
         covid_case_page()
     elif (selected_page == "ICU"):
-        icu()
+        icuPage()
     else:
         death()
         

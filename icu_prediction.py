@@ -15,6 +15,10 @@ import mongodb_helper as mh
 # Load the dataset
 data = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/Kaggle_Sirio_preprocessed_train.csv')
 
+# Check the shape and columns of the data
+print(data.shape)
+print(data.columns)
+
 # Define independent and dependent variables
 X = data.drop(columns=['ICU']).values
 y = data['ICU'].values
@@ -101,3 +105,4 @@ joblib.dump(data.drop(columns=['ICU']).columns, 'feature_columns.pkl')  # Save t
 mh.save_model_to_db(xgb_best, 'predict_icu_xgb', 'xgb_icu_prediction.pkl')
 mh.save_model_to_db(scaler, 'predict_icu_xgb', 'scaler.pkl')
 mh.save_model_to_db(data.drop(columns=['ICU']).columns, 'predict_icu_xgb', 'feature_columns.pkl')
+
