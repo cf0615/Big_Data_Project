@@ -1,7 +1,10 @@
 # Big_Data_Project
 ## 1 Requirements
+`run the save_data_mongodb first to upload all the datasets to mongodb`
+*rmb to change the path
+## 2
 `pip install streamlit`
-## 2 How to run?
+## 3 How to run?
 `streamlit run YOUR_PATH/dashboard.py` / `python -m streamlit run YOUR_PATH/dashboard.py`
 
 ## Thanks to
