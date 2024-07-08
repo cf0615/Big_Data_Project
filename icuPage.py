@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Jul  7 17:06:37 2024
-
-@author: User
-"""
 import streamlit as st
 import pandas as pd
 import altair as alt
