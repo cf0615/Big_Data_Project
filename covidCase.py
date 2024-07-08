@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 # covidCase.py
 import streamlit as st
-import pandas as pd
-import json
 import folium
 from streamlit_folium import folium_static
 import altair as alt
 import matplotlib.pyplot as plt
 import mongodb_helper as mh
 
-@st.cache_data
 def load_data():
     cases_malaysia = mh.load_data_from_db('cases_malaysia', 'CovidData')
     case_state = mh.load_data_from_db('cases_state', 'CovidData')
@@ -24,7 +21,6 @@ def load_data():
     
     return cases_malaysia, case_state, geojson_data
     
-    return cases_malaysia, case_state, geojson_data
 
 def plot_overall_cases(cases_malaysia, selected_year):
     st.subheader("Overall Malaysia Data")

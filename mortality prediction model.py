@@ -6,9 +6,10 @@ import xgboost as xgb
 from sklearn.metrics import confusion_matrix, roc_curve, auc, ConfusionMatrixDisplay, classification_report, accuracy_score, precision_score, recall_score, f1_score
 import joblib
 from sklearn.calibration import CalibratedClassifierCV
+import mongodb_helper as mh
 
 # Load the dataset
-file_path = 'C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/Preprocessed/covidDataPreprocessed.csv'
+file_path = 'C:/Users/junch/OneDrive/Documents/BigData/Project/Big_Data_Project-main/Dataset/covid_data.csv'
 df = pd.read_csv(file_path)
 
 # Separate the majority and minority classes
@@ -115,9 +116,9 @@ print("\nClassification Report with Important Features:")
 print(report_important)
 
 # Export the model
-joblib_file = 'C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/xgboost_covid_model_important.pkl'
+joblib_file = 'xgboost_covid_model.pkl'
 joblib.dump(calibrated_model_important, joblib_file)
-
+mh.save_model_to_db(calibrated_model_important, 'predict_mortality_xgb', joblib_file)
 
 # Function to compare a sample from the dataset with the calibrated model's prediction using a custom threshold
 def verify_sample_with_threshold_calibrated_important(sample_index, threshold=0.5):

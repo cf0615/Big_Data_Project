@@ -10,7 +10,7 @@ def main():
     #sidebar title
     st.sidebar.header('Pages')
     #sidebar option
-    selected_page = st.sidebar.selectbox('Select Page', ['Covid Cases', 'ICU', 'Deaths', 'Mortality', 'Mortality Prediction'])
+    selected_page = st.sidebar.selectbox('Select Page', ['Covid Cases', 'ICU', 'Mortality', 'Mortality Prediction'])
     #markdown
     st.sidebar.markdown("---")
     

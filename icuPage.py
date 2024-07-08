@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import mongodb_helper as mh
 
-icu_data = pd.read_csv('C:/Users/User/.spyder-py3/icu_preprocessed.csv')
+icu_data = mh.load_data_from_db('icu', 'CovidData')
 
 icu_data['tooltip'] = icu_data.apply(lambda row: f"{row['state']}: {row['beds_icu_total']} cases", axis=1)
 
