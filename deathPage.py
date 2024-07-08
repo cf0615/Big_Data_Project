@@ -1,16 +1,11 @@
 import streamlit as st
 import pandas as pd
-import folium
-from streamlit_folium import folium_static
-import json
-import joblib
 from sklearn.metrics import classification_report
 import altair as alt
+import mongodb_helper as mh
 
-deaths_state = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_state.csv')
 # Load the pre-trained model
-model_path = 'C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/xgboost_covid_model_important.pkl'  # Update with the actual path
-calibrated_model = joblib.load(model_path)
+calibrated_model = mh.load_model_from_db('xgboost_covid_model.pkl', 'predict_mortality_xgb')
 
 # Define the threshold for prediction
 threshold = 0.3
@@ -59,7 +54,7 @@ def predict_mortality():
         prediction, prediction_proba = predict_with_threshold(calibrated_model, input_features, threshold)
         result = 'Death' if prediction[0] == 1 else 'Survival'
         st.write(f"Prediction: {result}")
-        #st.write(f"Prediction Probability: {prediction_proba[0] * 100:.2f}% chance of death")
+        st.write(f"Prediction Probability: {prediction_proba[0] * 100:.2f}% chance of death")
 
 
 def mortality():
@@ -67,8 +62,8 @@ def mortality():
     st.sidebar.header('Filters')
 
     # Load the datasets
-    deaths_malaysia = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_malaysia.csv')
-    deaths_state = pd.read_csv('C:/Users/shenhao/OneDrive/Inti/Degree/Sem 6/Big Data/dataset/mortality/deaths_state.csv')
+    deaths_malaysia = mh.load_data_from_db('deaths_malaysia', 'CovidData')
+    deaths_state = mh.load_data_from_db('deaths_state', 'CovidData')
 
     # Convert date columns to datetime
     deaths_malaysia['date'] = pd.to_datetime(deaths_malaysia['date'])

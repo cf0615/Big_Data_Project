@@ -13,7 +13,7 @@ import joblib
 import mongodb_helper as mh
 
 # Load the dataset
-data = pd.read_csv('C:/Users/junch/OneDrive/Documents/BigData/Project/Preprocess/Kaggle_Sirio_preprocessed_train.csv')
+data = pd.read_csv('PATH/TO/Kaggle_Sirio_preprocessed_train.csv')
 
 # Check the shape and columns of the data
 print(data.shape)
