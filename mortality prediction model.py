@@ -9,7 +9,7 @@ from sklearn.calibration import CalibratedClassifierCV
 import mongodb_helper as mh
 
 # Load the dataset
-file_path = 'C:/Users/junch/OneDrive/Documents/BigData/Project/Big_Data_Project-main/Dataset/covid_data.csv'
+file_path = 'C:/Users/shenhao/Downloads/Big_Data_Project-main/Big_Data_Project-main/Dataset/covidDataPreprocessed.csv'
 df = pd.read_csv(file_path)
 
 # Separate the majority and minority classes
@@ -42,51 +42,25 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 model = xgb.XGBClassifier(n_estimators=50, max_depth=3, eval_metric='logloss')
 model.fit(X_train, y_train)
 
-# Extract feature importances
-importances = model.feature_importances_
-feature_names = X.columns
-feature_importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
-
-# Display feature importances
-plt.figure(figsize=(10, 8))
-plt.barh(feature_importance_df['Feature'], feature_importance_df['Importance'])
-plt.xlabel('Importance')
-plt.ylabel('Feature')
-plt.title('Feature Importances')
-plt.gca().invert_yaxis()
-plt.show()
-
-# Select the most important features (e.g., top 10)
-important_features = feature_importance_df['Feature'].head(10).tolist()
-
-# Use only the important features
-X_train_important = X_train[important_features]
-X_test_important = X_test[important_features]
-
-# Train a new XGBoost model with the selected important features
-model_important = xgb.XGBClassifier(n_estimators=50, max_depth=3, eval_metric='logloss')
-model_important.fit(X_train_important, y_train)
-
 # Calibrate the model using Platt Scaling
-calibrated_model_important = CalibratedClassifierCV(model_important, method='sigmoid', cv='prefit')
-calibrated_model_important.fit(X_train_important, y_train)
+calibrated_model = CalibratedClassifierCV(model, method='sigmoid', cv='prefit')
+calibrated_model.fit(X_train, y_train)
 
 # Make predictions
-y_pred_important = calibrated_model_important.predict(X_test_important)
-y_pred_proba_important = calibrated_model_important.predict_proba(X_test_important)[:, 1]
+y_pred = calibrated_model.predict(X_test)
+y_pred_proba = calibrated_model.predict_proba(X_test)[:, 1]
 
 # Confusion matrix
-cm_important = confusion_matrix(y_test, y_pred_important)
-disp_important = ConfusionMatrixDisplay(confusion_matrix=cm_important)
-disp_important.plot()
+cm = confusion_matrix(y_test, y_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+disp.plot()
 
 # ROC curve
-fpr_important, tpr_important, _ = roc_curve(y_test, y_pred_proba_important)
-roc_auc_important = auc(fpr_important, tpr_important)
+fpr, tpr, _ = roc_curve(y_test, y_pred_proba)
+roc_auc = auc(fpr, tpr)
 
 plt.figure()
-plt.plot(fpr_important, tpr_important, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc_important)
+plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
 plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
@@ -97,50 +71,25 @@ plt.legend(loc="lower right")
 plt.show()
 
 # Model performance metrics
-accuracy_important = accuracy_score(y_test, y_pred_important)
-precision_important = precision_score(y_test, y_pred_important)
-recall_important = recall_score(y_test, y_pred_important)
-f1_important = f1_score(y_test, y_pred_important)
-specificity_important = cm_important[0, 0] / (cm_important[0, 0] + cm_important[0, 1])
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+specificity = cm[0, 0] / (cm[0, 0] + cm[0, 1])
 
-print("Model Performance Metrics with Important Features:")
-print(f"Accuracy: {accuracy_important:.4f}")
-print(f"Precision: {precision_important:.4f}")
-print(f"Recall: {recall_important:.4f}")
-print(f"F1 Score: {f1_important:.4f}")
-print(f"Specificity: {specificity_important:.4f}")
+print("Model Performance Metrics with All Features:")
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")
+print(f"Specificity: {specificity:.4f}")
 
 # Classification report
-report_important = classification_report(y_test, y_pred_important)
-print("\nClassification Report with Important Features:")
-print(report_important)
+report = classification_report(y_test, y_pred)
+print("\nClassification Report with All Features:")
+print(report)
 
 # Export the model
 joblib_file = 'xgboost_covid_model.pkl'
-joblib.dump(calibrated_model_important, joblib_file)
-mh.save_model_to_db(calibrated_model_important, 'predict_mortality_xgb', joblib_file)
 
-# Function to compare a sample from the dataset with the calibrated model's prediction using a custom threshold
-def verify_sample_with_threshold_calibrated_important(sample_index, threshold=0.5):
-    sample = df.iloc[sample_index].drop('RESULT')
-    actual_result = df.iloc[sample_index]['RESULT']
-    
-    # Use only the important features
-    sample_important = sample[important_features]
-    
-    # Convert sample to DataFrame
-    sample_df_important = pd.DataFrame([sample_important])
-    
-    # Make prediction with custom threshold using calibrated model
-    prediction_proba = calibrated_model_important.predict_proba(sample_df_important)
-    prediction = (prediction_proba[:, 1] >= threshold).astype(int)
-    
-    print(f"Sample Index: {sample_index}")
-    print(f"Input Features:\n{sample_important}")
-    print(f"Actual Result: {'Death' if actual_result == 1 else 'Survival'}")
-    print(f"Calibrated Model Prediction with threshold {threshold}: {'Death' if prediction[0] == 1 else 'Survival'}")
-    print(f"Prediction Probability: {prediction_proba[0][1] * 100:.2f}% chance of death")
-    print()
-
-# Verify a specific sample from the dataset with a custom threshold using the calibrated model
-verify_sample_with_threshold_calibrated_important(35, threshold=0.3)
+mh.save_model_to_db(calibrated_model, 'predict_mortality_xgb', 'xgboost_covid_model.pkl')

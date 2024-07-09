@@ -1,60 +1,63 @@
 import streamlit as st
 import pandas as pd
-from sklearn.metrics import classification_report
 import altair as alt
 import mongodb_helper as mh
 
 # Load the pre-trained model
 calibrated_model = mh.load_model_from_db('xgboost_covid_model.pkl', 'predict_mortality_xgb')
-
-# Define the threshold for prediction
-threshold = 0.3
-
-# Function to make predictions with a custom threshold
-def predict_with_threshold(model, X, threshold):
-    proba = model.predict_proba(X)[:, 1]
-    return (proba >= threshold).astype(int), proba
-
-def display_classification_report(y_true, y_pred):
-    report = classification_report(y_true, y_pred, output_dict=True)
-    report_df = pd.DataFrame(report).transpose()
-    st.dataframe(report_df)
     
 def predict_mortality():
-    st.subheader("Mortality Prediction")
+    # Load the trained model from the database
+    model = mh.load_model_from_db('xgboost_covid_model.pkl', 'predict_mortality_xgb')
 
-    # Create input fields for each feature
-    pneumonia = st.selectbox('Pneumonia', [0, 1])
-    age = st.number_input('Age', min_value=0, max_value=120, value=55)
-    diabetes = st.selectbox('Diabetes', [0, 1])
-    icu = st.selectbox('ICU', [0, 1])
-    renal_chronic = st.selectbox('Renal Chronic', [0, 1])
-    sex = st.selectbox('Sex (0: Male, 1: Female)', [0, 1])
-    hypertension = st.selectbox('Hypertension', [0, 1])
-    obesity = st.selectbox('Obesity', [0, 1])
-    other_disease = st.selectbox('Other Disease', [0, 1])
-    inmsupr = st.selectbox('Immunosuppressed', [0, 1])
+    # Streamlit app
+    st.title('Mortality Prediction')
 
-    if st.button('Predict'):
-        # Create a dataframe for the input features
-        input_features = pd.DataFrame({
-            'PNEUMONIA': [pneumonia],
-            'AGE': [age],
-            'DIABETES': [diabetes],
-            'ICU': [icu],
-            'RENAL_CHRONIC': [renal_chronic],
-            'SEX': [sex],
-            'HIPERTENSION': [hypertension],
-            'OBESITY': [obesity],
-            'OTHER_DISEASE': [other_disease],
-            'INMSUPR': [inmsupr]
-        })
+    # File uploader
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+
+    if uploaded_file is not None:
+        # Read the uploaded CSV file
+        input_df = pd.read_csv(uploaded_file)
+
+        # Display the uploaded data
+        st.subheader('Uploaded Data')
+        st.write(input_df.head())  # Display the first few rows of the data
+
+        # Display the shape of the data
+        st.subheader('Shape of the Data')
+        st.write(input_df.shape)
+
+        # Display the columns of the data
+        st.subheader('Columns in the Data')
+        st.write(input_df.columns.tolist())
+
+        # Remove columns that should not be part of the prediction input
+        if 'RESULT' in input_df.columns:
+            input_df = input_df.drop(columns=['RESULT'])
+
+        # Recheck the columns of the data after dropping unnecessary columns
+        st.subheader('Columns after Dropping Unnecessary Columns')
+        st.write(input_df.columns.tolist())
 
         # Make prediction
-        prediction, prediction_proba = predict_with_threshold(calibrated_model, input_features, threshold)
-        result = 'Death' if prediction[0] == 1 else 'Survival'
-        st.write(f"Prediction: {result}")
-        st.write(f"Prediction Probability: {prediction_proba[0] * 100:.2f}% chance of death")
+        try:
+            # Make prediction
+            prediction = model.predict(input_df)
+            prediction_prob = model.predict_proba(input_df)
+
+            # Display the predictions
+            st.subheader('Prediction')
+            input_df['Mortality Prediction'] = prediction
+            st.write(input_df[['Mortality Prediction']])
+
+            st.subheader('Prediction Probability')
+            st.write(pd.DataFrame(prediction_prob, columns=[f'Probability of class {i}' for i in range(prediction_prob.shape[1])]))
+        except ValueError as e:
+            st.error(f"Error in prediction: {e}")
+            st.write("Please ensure the uploaded file has the correct format and feature columns.")
+    else:
+        st.info("Please upload a CSV file to proceed.")
 
 
 def mortality():
