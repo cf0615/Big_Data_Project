@@ -133,10 +133,11 @@ def icuPage():
 
 
 def icuPredict():
-    # Load the trained model, scaler, and feature columns
+    # Load the trained model, scaler, feature columns and imputer
     model = mh.load_model_from_db('xgb_icu_prediction.pkl', 'predict_icu_xgb')
     scaler = mh.load_model_from_db('scaler.pkl', 'predict_icu_xgb')
     feature_columns = mh.load_model_from_db('feature_columns.pkl', 'predict_icu_xgb')
+    imputer = mh.load_model_from_db('imputer.pkl', 'predict_icu_xgb')
 
     # Streamlit app
     st.title('ICU Admission Prediction')
@@ -178,12 +179,27 @@ def icuPredict():
         if extra_columns:
             st.error(f"The uploaded file has extra columns that were not used during training: {', '.join(extra_columns)}")
 
+        # Calculate the number of missing values per row
+        input_df['row_missing_columns'] = input_df.isnull().sum(axis=1) - 1    
+        #st.write(input_df.head())  # Display the first few rows of the data
+
         # Proceed if there are no missing or extra columns
         if not missing_columns and not extra_columns:
             try:
+                # Impute missing values using the fitted imputer
+                input_imputed = imputer.transform(input_df[feature_columns])
+                # Convert the imputed array back to a DataFrame
+                #input_imputed_df = pd.DataFrame(input_imputed, columns=feature_columns)
+               
+                # Display the imputed data
+                #st.subheader('Data after Imputation')
+                #st.write(input_imputed_df.head())
+                
                 # Preprocess input data
-                input_scaled = scaler.transform(input_df[feature_columns])
-
+                input_scaled = scaler.transform(input_imputed)
+                #input_scaled_df = pd.DataFrame(input_scaled, columns=feature_columns)
+                #st.write(input_scaled_df.head())  # Display the first few rows of the data
+                
                 # Make prediction
                 prediction = model.predict(input_scaled)
                 prediction_prob = model.predict_proba(input_scaled)
