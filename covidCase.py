@@ -178,17 +178,6 @@ def covid_case_page():
         if selected_year != 'All':
             state_data = state_data[state_data['year'] == int(selected_year)]
 
-        st.subheader(f"New Cases for {selected_state}")
-        case_state_chart = alt.Chart(state_data).mark_line().encode(
-            x='date:T',
-            y='cases_new:Q',
-            tooltip=['date:T', 'cases_new:Q']
-        ).properties(
-            width=700,
-            height=400
-        )
-        st.altair_chart(case_state_chart)
-
         st.subheader(f"Cases Recovered for {selected_state}")
         recovered_state_chart = alt.Chart(state_data).mark_line().encode(
             x='date:T',
