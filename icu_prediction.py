@@ -23,6 +23,11 @@ print(dataset.columns)
 X = dataset.drop(columns=['ICU']).values
 y = dataset['ICU'].values
 
+#Fit the imputer on training data
+imputer = SimpleImputer(strategy='mean')
+imputer.fit(X)
+mh.save_model_to_db(imputer,'predict_icu_xgb', 'imputer.pkl')
+
 # Check unique values in the target variable
 print("Unique values in the target variable:", np.unique(y))
 
@@ -99,10 +104,6 @@ print("Time consumed for training: %4.3f seconds" % (xgboost_train_time))
 print("Time consumed for prediction: %6.5f seconds" % (xgboost_prediction_time))
 
 # Save the final XGBoost model and scaler
-joblib.dump(best_xgboost_model, 'xgboost_icu_prediction.pkl')
-joblib.dump(feature_scaler, 'scaler.pkl')
-joblib.dump(dataset.drop(columns=['ICU']).columns, 'feature_columns.pkl')  # Save the feature columns
-
 mh.save_model_to_db(best_xgboost_model, 'predict_icu_xgboost', 'xgboost_icu_prediction.pkl')
 mh.save_model_to_db(feature_scaler, 'predict_icu_xgboost', 'scaler.pkl')
 mh.save_model_to_db(dataset.drop(columns=['ICU']).columns, 'predict_icu_xgboost', 'feature_columns.pkl')
